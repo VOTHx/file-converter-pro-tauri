@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>File Converter Pro</title>
+<style>
+  :root {
+    --black: #000000;
+    --bg: #121212;
+    --panel: #181818;
+    --panel-hover: #282828;
+    --border: rgba(255,255,255,0.08);
+    --text: #ffffff;
+    --muted: #a7a7a7;
+    --accent: #1ed760;
+    --accent-press: #1aa34a;
+    --mono: ui-monospace, Consolas, "SF Mono", monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 14px;
+  }
+
+  /* ---- Sidebar ---- */
+  nav {
+    width: 230px;
+    background: var(--black);
+    flex-shrink: 0;
+    padding: 20px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px 20px;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.2px;
+  }
+  .brand svg { flex-shrink: 0; }
+  nav .tab {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 14px;
+  }
+  nav .tab svg { flex-shrink: 0; opacity: 0.85; }
+  nav .tab:hover { color: var(--text); }
+  nav .tab.active { color: var(--text); }
+  nav .tab.active svg { opacity: 1; }
+
+  /* ---- Main ---- */
+  main { flex: 1; overflow-y: auto; padding: 32px 36px; }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .panel { display: none; max-width: 760px; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  select, textarea, input {
+    font-family: inherit;
+    font-size: 13px;
+    background: var(--panel-hover);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    width: 100%;
+  }
+  select { margin-bottom: 14px; width: auto; min-width: 220px; }
+  textarea { height: 180px; font-family: var(--mono); resize: vertical; }
+
+  .row { display: flex; gap: 16px; }
+  .col { flex: 1; }
+  .col label { font-size: 12px; color: var(--muted); font-weight: 700; display: block; margin-bottom: 8px; }
+
+  button {
+    cursor: pointer;
+    background: var(--accent);
+    color: #000000;
+    border: none;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 500px;
+    padding: 10px 28px;
+    margin-top: 16px;
+    transition: transform 0.08s ease, background 0.08s ease;
+  }
+  button:hover { background: #22e065; transform: scale(1.03); }
+  button:active { background: var(--accent-press); transform: scale(0.98); }
+  button.secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--muted);
+    border-radius: 500px;
+    padding: 9px 20px;
+  }
+  button.secondary:hover { border-color: var(--text); transform: scale(1.03); background: transparent; }
+
+  .filelist { margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .filelist div { padding: 7px 10px; border-bottom: 1px solid var(--border); border-radius: 4px; }
+  .filelist div:hover { background: var(--panel-hover); color: var(--text); }
+
+  .status { margin-top: 16px; font-size: 13px; font-weight: 600; }
+  .status.ok { color: var(--accent); }
+  .status.err { color: #f15e6c; }
+
+  .dropzone {
+    border: 1.5px dashed rgba(255,255,255,0.18);
+    border-radius: 8px;
+    transition: border-color 0.08s ease, background 0.08s ease;
+  }
+  .dropzone.hover {
+    border-color: var(--accent);
+    background: rgba(30,215,96,0.06);
+    box-shadow: 0 0 0 3px rgba(30,215,96,0.15);
+  }
+  .drop-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn-row button { margin-top: 0; }
+  .output-box { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .toast {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-left: 10px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .toast.show { opacity: 1; }
+  .hash-row { display: flex; gap: 10px; align-items: center; }
+  .hash-row select { margin-bottom: 0; }
+
+  .detect-line { font-size: 12px; color: var(--muted); margin: -6px 0 12px; }
+  .detect-line b { color: var(--accent); }
+
+  .history-item { display: flex; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .history-item:hover { background: var(--panel-hover); border-radius: 4px; }
+  .history-time { color: var(--muted); font-size: 12px; }
+
+  .theme-toggle {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .theme-toggle:hover { color: var(--text); background: var(--panel-hover); }
+
+  [data-theme="light"] {
+    --black: #ffffff;
+    --bg: #f7f7f7;
+    --panel: #ffffff;
+    --panel-hover: #ececec;
+    --border: rgba(0,0,0,0.1);
+    --text: #121212;
+    --muted: #5e5e5e;
+  }
+  [data-theme="light"] nav { border-right: 1px solid var(--border); }
+
+  h2.section-label { font-size: 13px; font-weight: 800; color: var(--muted); margin: 28px 0 12px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#1ed760"/><path d="M7 15c3-1 7-1 10 1M7 11c4-1.3 8.5-1 11 1.2M8 7.5c3.3-1 7-0.6 9.3 1" stroke="#000" stroke-width="1.6" stroke-linecap="round"/></svg>
+    Converter Pro
+  </div>
+  <div class="tab active" data-panel="text-panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg>
+    Text &amp; Data
+  </div>
+  <div class="tab" data-panel="image-panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5.5-5.5L9 17"/></svg>
+    Images
+  </div>
+  <div class="tab" data-panel="zip-panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7l1-3h14l1 3M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7M4 7h16"/><path d="M10 11h4"/></svg>
+    Zip
+  </div>
+  <div class="tab" data-panel="devtools-panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 2.5l7 7-2.5 2.5-7-7z"/><path d="M4 14l6 6M2 22l4-1 10-10-3-3L3 18z"/></svg>
+    Dev Tools
+  </div>
+  <div class="theme-toggle" id="theme-toggle-btn">
+    <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z"/></svg>
+    <span id="theme-label">Dark mode</span>
+  </div>
+</nav>
+
+<main>
+  <section class="panel active" id="text-panel">
+    <h1>Text &amp; Data Converter</h1>
+    <div class="sub">Paste content, pick a conversion, convert.</div>
+    <div class="card">
+      <select id="text-mode">
+        <option value="text-to-json">Text → JSON</option>
+        <option value="json-to-text">JSON → Text</option>
+        <option value="csv-to-json">CSV → JSON</option>
+        <option value="json-to-csv">JSON → CSV</option>
+        <option value="json-to-xml">JSON → XML</option>
+        <option value="xml-to-json">XML → JSON</option>
+        <option value="text-to-base64">Text → Base64</option>
+        <option value="base64-to-text">Base64 → Text</option>
+        <option value="json-to-yaml">JSON → YAML</option>
+        <option value="yaml-to-json">YAML → JSON</option>
+      </select>
+      <div class="detect-line" id="detect-line"></div>
+      <div class="row">
+        <div class="col">
+          <label>Input</label>
+          <div class="dropzone" data-dropzone="text" style="padding:2px;">
+            <textarea id="text-input" placeholder="Paste content here..."></textarea>
+          </div>
+          <div class="drop-hint">or drag and drop a file here</div>
+        </div>
+        <div class="col">
+          <label>Output</label>
+          <textarea id="text-output" readonly placeholder="Result appears here..."></textarea>
+        </div>
+      </div>
+      <button id="text-convert-btn">Convert</button>
+      <div class="btn-row">
+        <button class="secondary" id="text-copy-btn">Copy Output</button>
+        <button class="secondary" id="text-download-btn">Download</button>
+        <span class="toast" id="text-toast">Copied!</span>
+      </div>
+      <div class="status" id="text-status"></div>
+    </div>
+
+    <div class="card">
+      <div class="output-box">
+        <h2 class="section-label" style="margin:0;">Recent Conversions</h2>
+        <button class="secondary" id="history-clear-btn" style="padding:4px 14px; font-size:12px;">Clear</button>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="image-panel">
+    <h1>Image Converter</h1>
+    <div class="sub">Convert PNG, JPG, WebP, and BMP files — batch supported.</div>
+    <div class="card dropzone" data-dropzone="image" style="padding:28px 20px; text-align:center;">
+      <button class="secondary" id="image-pick-btn">Choose image files</button>
+      <div class="drop-hint">or drag and drop image files here</div>
+      <div class="filelist" id="image-filelist" style="text-align:left;"></div>
+    </div>
+    <div class="card">
+      <h2 class="section-label">Convert to</h2>
+      <select id="image-format">
+        <option value="png">PNG</option><option value="jpg">JPG</option>
+        <option value="webp">WebP</option><option value="bmp">BMP</option>
+      </select><br/>
+      <button id="image-convert-btn">Convert All</button>
+      <div class="status" id="image-status"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">Image → Base64</h2>
+      <button class="secondary" id="b64-pick-btn">Choose one image</button>
+      <div class="filelist" id="b64-filelist"></div>
+      <textarea id="b64-output" readonly style="height:100px; margin-top:12px;" placeholder="Base64 string appears here..."></textarea>
+      <div class="btn-row">
+        <button id="b64-generate-btn">Convert</button>
+        <button class="secondary" id="b64-copy-btn">Copy</button>
+        <button class="secondary" id="b64-copy-datauri-btn">Copy as Data URI</button>
+        <span class="toast" id="b64-toast">Copied!</span>
+      </div>
+      <div class="status" id="b64-status"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">Image Resizer</h2>
+      <button class="secondary" id="resize-pick-btn">Choose image files</button>
+      <div class="filelist" id="resize-filelist"></div>
+      <div class="row" style="margin-top:12px; align-items:flex-end;">
+        <div class="col"><label>Width (px)</label><input id="resize-width" type="number" value="800" /></div>
+        <div class="col"><label>Height (px)</label><input id="resize-height" type="number" value="600" /></div>
+      </div>
+      <label style="font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; margin:12px 0;">
+        <input type="checkbox" id="resize-aspect" checked style="width:auto; padding:0;" />
+        Maintain aspect ratio (fit within the box above instead of stretching)
+      </label>
+      <button id="resize-run-btn">Resize All</button>
+      <div class="status" id="resize-status"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">Image Compressor</h2>
+      <div class="sub" style="margin-bottom:12px;">Always outputs JPEG — the only format here with a real quality/size tradeoff.</div>
+      <button class="secondary" id="compress-pick-btn">Choose image files</button>
+      <div class="filelist" id="compress-filelist"></div>
+      <label style="font-size:12px; color:var(--muted); font-weight:700; display:block; margin:12px 0 8px;">Quality (1–100)</label>
+      <input id="compress-quality" type="number" value="75" min="1" max="100" style="width:100px;" />
+      <button id="compress-run-btn">Compress All</button>
+      <div class="status" id="compress-status"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="zip-panel">
+    <h1>Zip Tools</h1>
+    <div class="sub">Extract a .zip, or bundle files into one.</div>
+    <div class="card dropzone" data-dropzone="zip-extract" style="padding:20px;">
+      <h2 class="section-label" style="margin-top:0;">Extract a .zip</h2>
+      <button class="secondary" id="zip-pick-btn">Choose .zip file</button>
+      <div class="drop-hint">or drag and drop a .zip file here</div>
+      <div class="filelist" id="zip-filelist"></div>
+      <button id="zip-extract-btn">Extract</button>
+    </div>
+    <div class="card dropzone" data-dropzone="bundle" style="padding:20px;">
+      <h2 class="section-label" style="margin-top:0;">Bundle files into a .zip</h2>
+      <button class="secondary" id="bundle-pick-btn">Choose files to bundle</button>
+      <div class="drop-hint">or drag and drop files here</div>
+      <div class="filelist" id="bundle-filelist"></div>
+      <input id="bundle-name" placeholder="output-name.zip" style="width:220px; margin-top:12px;" />
+      <button id="bundle-btn">Create Zip</button>
+    </div>
+    <div class="status" id="zip-status"></div>
+  </section>
+
+  <section class="panel" id="devtools-panel">
+    <h1>Dev Tools</h1>
+    <div class="sub">Small utilities for working with data.</div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">JSON Formatter</h2>
+      <div class="row">
+        <div class="col"><label>Input</label><textarea id="json-input" placeholder='{"z":1,"a":2}'></textarea></div>
+        <div class="col"><label>Output</label><textarea id="json-output" readonly></textarea></div>
+      </div>
+      <div class="btn-row">
+        <button id="json-pretty-btn">Pretty Print</button>
+        <button id="json-minify-btn">Minify</button>
+        <button id="json-validate-btn">Validate</button>
+        <button id="json-sort-btn">Sort Keys</button>
+      </div>
+      <div class="btn-row">
+        <button class="secondary" id="json-copy-btn">Copy Output</button>
+        <button class="secondary" id="json-download-btn">Download</button>
+        <span class="toast" id="json-toast">Copied!</span>
+      </div>
+      <div class="status" id="json-status"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">UUID Generator</h2>
+      <div class="btn-row">
+        <button id="uuid-generate-btn">Generate UUID</button>
+        <button class="secondary" id="uuid-copy-btn">Copy</button>
+        <span class="toast" id="uuid-toast">Copied!</span>
+      </div>
+      <input id="uuid-output" readonly style="margin-top:12px; font-family:var(--mono);" placeholder="Click Generate..." />
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">Hash Generator</h2>
+      <textarea id="hash-input" style="height:100px;" placeholder="Text to hash..."></textarea>
+      <div class="hash-row" style="margin-top:12px;">
+        <select id="hash-algo">
+          <option value="MD5">MD5</option>
+          <option value="SHA-256">SHA-256</option>
+          <option value="SHA-512">SHA-512</option>
+        </select>
+        <button id="hash-generate-btn" style="margin-top:0;">Generate Hash</button>
+      </div>
+      <input id="hash-output" readonly style="margin-top:12px; font-family:var(--mono);" placeholder="Result appears here..." />
+      <div class="btn-row">
+        <button class="secondary" id="hash-copy-btn">Copy</button>
+        <span class="toast" id="hash-toast">Copied!</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">URL Encode / Decode</h2>
+      <div class="row">
+        <div class="col"><label>Input</label><textarea id="url-input" style="height:100px;" placeholder="Hello World"></textarea></div>
+        <div class="col"><label>Output</label><textarea id="url-output" readonly style="height:100px;"></textarea></div>
+      </div>
+      <div class="btn-row">
+        <button id="url-encode-btn">Encode</button>
+        <button id="url-decode-btn">Decode</button>
+        <button class="secondary" id="url-copy-btn">Copy</button>
+        <span class="toast" id="url-toast">Copied!</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">JWT Decoder</h2>
+      <div class="sub" style="margin-bottom:12px;">Decodes the header and payload only — does not verify the signature.</div>
+      <textarea id="jwt-input" style="height:80px; font-family:var(--mono);" placeholder="eyJhbGciOi..."></textarea>
+      <button id="jwt-decode-btn">Decode</button>
+      <div class="status" id="jwt-status"></div>
+      <div class="row" style="margin-top:12px;">
+        <div class="col"><label>Header</label><textarea id="jwt-header" readonly style="height:120px;"></textarea></div>
+        <div class="col"><label>Payload</label><textarea id="jwt-payload" readonly style="height:120px;"></textarea></div>
+      </div>
+      <label style="font-size:12px; color:var(--muted); font-weight:700; display:block; margin:12px 0 8px;">Signature (raw, unverified)</label>
+      <input id="jwt-signature" readonly style="font-family:var(--mono);" />
+    </div>
+
+    <div class="card">
+      <h2 class="section-label" style="margin-top:0;">Color Converter</h2>
+      <div class="sub" style="margin-bottom:12px;">Paste a HEX (#rrggbb), rgb(r,g,b), or hsl(h,s%,l%) value.</div>
+      <input id="color-input" placeholder="#1ed760" style="font-family:var(--mono);" />
+      <button id="color-convert-btn">Convert</button>
+      <div class="status" id="color-status"></div>
+      <div id="color-output" style="margin-top:12px; font-family:var(--mono); font-size:13px; display:none;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="color-swatch" style="width:36px; height:36px; border-radius:6px; border:1px solid var(--border);"></div>
+          <div>
+            <div id="color-hex"></div>
+            <div id="color-rgb"></div>
+            <div id="color-hsl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="renderer.js"></script>
+</body>
+</html>
